@@ -24,6 +24,7 @@ import {
   useGetWorkPostResponses,
   useRespondToWorkPost,
 } from "../hooks/useQueries";
+import { containsBannedContent } from "../utils/moderation";
 
 interface WorkPageProps {
   isAuthenticated: boolean;
@@ -61,6 +62,10 @@ function WorkPostCard({
 
   const handleRespond = async () => {
     if (!responseText.trim()) return;
+    if (containsBannedContent(responseText)) {
+      toast.error("This content violates community guidelines.");
+      return;
+    }
     try {
       await respondMutation.mutateAsync({
         postId: post.id,
@@ -200,6 +205,10 @@ export default function WorkPage({ isAuthenticated }: WorkPageProps) {
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) {
       toast.error("Please fill in title and description.");
+      return;
+    }
+    if (containsBannedContent(title) || containsBannedContent(description)) {
+      toast.error("This content violates community guidelines.");
       return;
     }
     try {

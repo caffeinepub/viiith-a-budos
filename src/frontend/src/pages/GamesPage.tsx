@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile } from "../backend.d";
 import { useActor } from "../hooks/useActor";
+import { useGetOnlineUsernames } from "../hooks/useExtraQueries";
 import { useGetAllUserProfiles } from "../hooks/useQueries";
 
 type GameId =
@@ -132,67 +133,239 @@ export default function GamesPage({
         {isAuthenticated && userProfile && (
           <PendingChallengesPanel username={userProfile.username} />
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.map((g, i) => (
-            <motion.div
-              key={g.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
+        <GameHubGrid
+          games={games}
+          isAuthenticated={isAuthenticated}
+          userProfile={userProfile}
+          onStartGame={(id) => setActiveGame(id)}
+        />
+      </motion.div>
+    </main>
+  );
+}
+
+// ─── Game Hub Grid ───────────────────────────────────────────────────────────
+
+type GameDef = {
+  id: GameId;
+  title: string;
+  desc: string;
+  emoji: string;
+  color: string;
+};
+
+function GameHubGrid({
+  games,
+  isAuthenticated,
+  userProfile,
+  onStartGame,
+}: {
+  games: GameDef[];
+  isAuthenticated: boolean;
+  userProfile: UserProfile | null | undefined;
+  onStartGame: (id: GameId) => void;
+}) {
+  const { data: onlineUsernames } = useGetOnlineUsernames(isAuthenticated);
+  const _onlineSet = new Set(onlineUsernames ?? []);
+  const onlineFriends = userProfile
+    ? ([] as string[])
+        .concat(onlineUsernames ?? [])
+        .filter((u) => u !== userProfile.username)
+    : [];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {games.map((g, i) => (
+        <motion.div
+          key={g.id}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.08 }}
+        >
+          <Card
+            className="overflow-hidden hover:shadow-lg transition-shadow border-0 group"
+            data-ocid={`games.item.${i + 1}`}
+          >
+            <button
+              type="button"
+              className={`h-24 w-full border-0 bg-gradient-to-br ${g.color} flex items-center justify-center text-5xl group-hover:scale-105 transition-transform duration-300 cursor-pointer`}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.error("Please log in to play games!");
+                  return;
+                }
+                onStartGame(g.id);
+              }}
             >
-              <Card
-                className="overflow-hidden hover:shadow-lg transition-shadow border-0 group"
-                data-ocid="games.item"
-              >
+              {g.emoji}
+            </button>
+            <CardHeader className="pb-1 pt-3">
+              <CardTitle className="text-base font-display">
+                {g.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-2">
+              <p className="text-muted-foreground text-xs">{g.desc}</p>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className={`h-28 w-full bg-gradient-to-br ${g.color} flex items-center justify-center text-5xl group-hover:scale-105 transition-transform duration-300 cursor-pointer border-0`}
+                  className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border bg-muted/30 hover:bg-primary/10 hover:border-primary/40 transition-all text-left"
                   onClick={() => {
                     if (!isAuthenticated) {
                       toast.error("Please log in to play games!");
                       return;
                     }
-                    setActiveGame(g.id);
+                    onStartGame(g.id);
                   }}
+                  data-ocid={`games.pve.button.${i + 1}`}
                 >
-                  {g.emoji}
+                  <span className="text-lg">🤖</span>
+                  <span className="text-xs font-semibold text-foreground">
+                    Single Player
+                  </span>
+                  <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                    Play against the computer
+                  </span>
                 </button>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-display">
-                    {g.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm mb-3">{g.desc}</p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          toast.error("Please log in to play games!");
-                          return;
-                        }
-                        setActiveGame(g.id);
-                      }}
-                      data-ocid="games.primary_button"
-                    >
-                      ▶ Play
-                    </Button>
-                    {isAuthenticated && userProfile && (
-                      <ChallengeFriendButton
-                        gameName={g.title}
-                        userProfile={userProfile}
-                      />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-    </main>
+                {isAuthenticated && userProfile ? (
+                  <OnlineChallengeButton
+                    gameName={g.title}
+                    userProfile={userProfile}
+                    onlineFriends={onlineFriends}
+                    index={i}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-all text-left opacity-60"
+                    onClick={() => toast.error("Please log in to play games!")}
+                    data-ocid={`games.pvp.button.${i + 1}`}
+                  >
+                    <span className="text-lg">👥</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      Multiplayer
+                    </span>
+                    <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                      Challenge your friends
+                    </span>
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function OnlineChallengeButton({
+  gameName,
+  userProfile,
+  onlineFriends,
+  index,
+}: {
+  gameName: string;
+  userProfile: UserProfile;
+  onlineFriends: string[];
+  index: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState("");
+  const { actor } = useActor();
+
+  const handleChallenge = async () => {
+    if (!selected || !actor) return;
+    try {
+      await (actor as any).sendGameChallenge(
+        userProfile.username,
+        selected,
+        gameName,
+      );
+      toast.success(`Challenge sent to ${selected}!`);
+      setOpen(false);
+      setSelected("");
+    } catch {
+      toast.error("Failed to send challenge.");
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border bg-muted/30 hover:bg-accent/10 hover:border-accent/40 transition-all text-left"
+        onClick={() => setOpen(true)}
+        data-ocid={`games.pvp.button.${index + 1}`}
+      >
+        <span className="text-lg">👥</span>
+        <span className="text-xs font-semibold text-foreground">
+          Multiplayer
+        </span>
+        <span className="text-[10px] text-muted-foreground text-center leading-tight">
+          Challenge your friends
+        </span>
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent data-ocid="games.challenge.dialog">
+          <DialogHeader>
+            <DialogTitle>🎮 Challenge a Friend — {gameName}</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Only online members can be challenged.
+            </p>
+            {onlineFriends.length === 0 ? (
+              <div
+                className="text-center py-6"
+                data-ocid="games.no_online.empty_state"
+              >
+                <p className="text-muted-foreground text-sm">
+                  😴 No friends online right now.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ask them to log in!
+                </p>
+              </div>
+            ) : (
+              <Select value={selected} onValueChange={setSelected}>
+                <SelectTrigger data-ocid="games.challenge.select">
+                  <SelectValue placeholder="Pick an online friend..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {onlineFriends.map((username) => (
+                    <SelectItem key={username} value={username}>
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                        @{username}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              data-ocid="games.challenge.cancel_button"
+            >
+              Cancel
+            </Button>
+            {onlineFriends.length > 0 && (
+              <Button
+                onClick={handleChallenge}
+                disabled={!selected}
+                data-ocid="games.challenge.confirm_button"
+              >
+                Send Challenge 🎮
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

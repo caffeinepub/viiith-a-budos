@@ -28,6 +28,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Candidate } from "../backend.d";
+// Election no longer supports vote changes
 import {
   useAddCandidate,
   useCastVote,
@@ -158,6 +159,25 @@ export default function ElectionPage({
   const { data: status, isLoading: statusLoading } = useGetElectionStatus();
   const { data: voted } = useHasVoted();
   const castVote = useCastVote();
+  const [confirmVoteId, setConfirmVoteId] = useState<bigint | null>(null);
+  const [electionTitle, setElectionTitle] = useState<string>(
+    () => localStorage.getItem("electionTitle") || "Class Election 2026-27",
+  );
+  const [electionDate, setElectionDate] = useState<string>(
+    () => localStorage.getItem("electionDate") || "",
+  );
+  const [electionTime, setElectionTime] = useState<string>(
+    () => localStorage.getItem("electionTime") || "",
+  );
+  const [electionDay, setElectionDay] = useState<string>(
+    () => localStorage.getItem("electionDay") || "",
+  );
+  const [editInfoDialog, setEditInfoDialog] = useState(false);
+  const [tempTitle, setTempTitle] = useState("");
+  const [tempDate, setTempDate] = useState("");
+  const [tempTime, setTempTime] = useState("");
+  const [tempDay, setTempDay] = useState("");
+
   const setElectionOpen = useSetElectionOpen();
   const addCandidate = useAddCandidate();
   const updateCandidate = useUpdateCandidate();
@@ -231,20 +251,40 @@ export default function ElectionPage({
     }
   };
 
-  const handleVote = async (candidateId: bigint) => {
+  const handleVoteClick = (candidateId: bigint) => {
     if (!isAuthenticated) {
       onLoginClick();
       return;
     }
-    setVotingId(candidateId);
+    if (voted) return; // one vote only
+    setConfirmVoteId(candidateId);
+  };
+
+  const handleConfirmVote = async () => {
+    if (confirmVoteId === null) return;
+    setVotingId(confirmVoteId);
+    setConfirmVoteId(null);
     try {
-      await castVote.mutateAsync(candidateId);
-      toast.success("Your vote has been cast!");
+      await castVote.mutateAsync(confirmVoteId);
+      toast.success("Your vote has been cast! ✅");
     } catch {
-      toast.error("Failed to cast vote. You may have already voted.");
+      toast.error("Failed to vote. You may have already voted.");
     } finally {
       setVotingId(null);
     }
+  };
+
+  const handleSaveElectionInfo = () => {
+    localStorage.setItem("electionTitle", tempTitle);
+    localStorage.setItem("electionDate", tempDate);
+    localStorage.setItem("electionTime", tempTime);
+    localStorage.setItem("electionDay", tempDay);
+    setElectionTitle(tempTitle);
+    setElectionDate(tempDate);
+    setElectionTime(tempTime);
+    setElectionDay(tempDay);
+    setEditInfoDialog(false);
+    toast.success("Election info updated!");
   };
 
   const handleToggleElection = async () => {
@@ -273,14 +313,35 @@ export default function ElectionPage({
             </span>
           </div>
           <h1 className="font-display text-4xl font-bold text-foreground">
-            Cast Your Vote
+            {electionTitle}
           </h1>
           <p className="text-muted-foreground mt-1">
             One vote per member — make it count!
           </p>
+          {(electionDay || electionDate || electionTime) && (
+            <p className="text-sm text-primary font-medium mt-1">
+              {[electionDay, electionDate, electionTime]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
         </div>
         {isAdmin && (
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTempTitle(electionTitle);
+                setTempDate(electionDate);
+                setTempTime(electionTime);
+                setTempDay(electionDay);
+                setEditInfoDialog(true);
+              }}
+              className="gap-2"
+              data-ocid="election.editinfo.button"
+            >
+              <Pencil className="w-4 h-4" /> Edit Info
+            </Button>
             <Button
               variant="outline"
               onClick={handleToggleElection}
@@ -424,8 +485,9 @@ export default function ElectionPage({
                         {isOpen && (
                           <Button
                             className="flex-1 font-medium"
-                            onClick={() => handleVote(candidate.id)}
-                            disabled={voted === true || isVoting || !isOpen}
+                            onClick={() => handleVoteClick(candidate.id)}
+                            disabled={isVoting || !isOpen || !!voted}
+                            variant={voted ? "secondary" : "default"}
                             data-ocid={`election.vote_button.${i + 1}`}
                           >
                             {isVoting ? (
@@ -534,6 +596,92 @@ export default function ElectionPage({
           onClose={() => setVoterModal(null)}
         />
       )}
+
+      {/* Are you sure? Confirmation Dialog */}
+      <Dialog
+        open={confirmVoteId !== null}
+        onOpenChange={(v) => !v && setConfirmVoteId(null)}
+      >
+        <DialogContent data-ocid="election.confirm.dialog">
+          <DialogHeader>
+            <DialogTitle className="font-display">Are you sure?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Once you cast your vote, it cannot be changed. This decision is
+            final.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmVoteId(null)}
+              data-ocid="election.confirm.cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmVote}
+              data-ocid="election.confirm.yes"
+            >
+              Yes, Cast My Vote
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin: Edit Election Info Dialog */}
+      <Dialog open={editInfoDialog} onOpenChange={setEditInfoDialog}>
+        <DialogContent data-ocid="election.editinfo.dialog">
+          <DialogHeader>
+            <DialogTitle className="font-display">
+              Edit Election Info
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Election Title</Label>
+              <Input
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                placeholder="e.g. Class President Election"
+                data-ocid="election.editinfo.title"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Day (e.g. Monday)</Label>
+              <Input
+                value={tempDay}
+                onChange={(e) => setTempDay(e.target.value)}
+                placeholder="e.g. Monday"
+                data-ocid="election.editinfo.day"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Date (e.g. 15 March 2026)</Label>
+              <Input
+                value={tempDate}
+                onChange={(e) => setTempDate(e.target.value)}
+                placeholder="e.g. 15 March 2026"
+                data-ocid="election.editinfo.date"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Time (e.g. 10:00 AM)</Label>
+              <Input
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                placeholder="e.g. 10:00 AM"
+                data-ocid="election.editinfo.time"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditInfoDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveElectionInfo}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

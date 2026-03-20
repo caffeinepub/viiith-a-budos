@@ -171,7 +171,7 @@ export default function HomePage({
       </section>
 
       {/* Stats strip */}
-      <div className="bg-foreground text-background">
+      <div className="bg-primary/20 text-foreground">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-wrap justify-center sm:justify-start gap-8">
             {stats.map((s) => (
@@ -180,7 +180,7 @@ export default function HomePage({
                 <span className="font-display font-bold text-lg">
                   {s.value}
                 </span>
-                <span className="text-background/60 text-sm">{s.label}</span>
+                <span className="text-foreground/60 text-sm">{s.label}</span>
               </div>
             ))}
           </div>
@@ -239,19 +239,19 @@ export default function HomePage({
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="rounded-2xl bg-foreground text-background p-8"
+          className="rounded-2xl bg-card border border-border text-foreground p-8"
           data-ocid="home.countdown.card"
         >
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Clock className="w-5 h-5 text-primary" />
-                <span className="text-background/60 text-sm font-medium uppercase tracking-wide">
+                <span className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
                   Countdown
                 </span>
               </div>
               <h3 className="font-display text-2xl font-bold mb-1">No Exam</h3>
-              <p className="text-background/60 text-sm">
+              <p className="text-muted-foreground text-sm">
                 No upcoming exams — enjoy the break! 🎉
               </p>
             </div>

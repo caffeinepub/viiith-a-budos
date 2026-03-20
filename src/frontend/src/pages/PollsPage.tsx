@@ -31,6 +31,7 @@ import {
   useGetAllUserProfiles,
   useVoteInPoll,
 } from "../hooks/useQueries";
+import { containsBannedContent } from "../utils/moderation";
 
 interface PollsPageProps {
   isAuthenticated: boolean;
@@ -220,6 +221,13 @@ export default function PollsPage({
       toast.error("Please add at least 2 options.");
       return;
     }
+    if (
+      containsBannedContent(pollQuestion) ||
+      validOptions.some(containsBannedContent)
+    ) {
+      toast.error("This content violates community guidelines.");
+      return;
+    }
     try {
       await createPoll.mutateAsync({
         question: pollQuestion,
@@ -236,6 +244,13 @@ export default function PollsPage({
   const handleCreatePlan = async () => {
     if (!planTitle.trim()) {
       toast.error("Please enter a title.");
+      return;
+    }
+    if (
+      containsBannedContent(planTitle) ||
+      containsBannedContent(planDescription)
+    ) {
+      toast.error("This content violates community guidelines.");
       return;
     }
     try {

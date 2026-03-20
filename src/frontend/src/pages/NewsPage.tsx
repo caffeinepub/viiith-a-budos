@@ -269,7 +269,7 @@ export default function NewsPage({
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              The official VIIIth A BUDOS website is now live! Version 1.0 is
+              The official VIIIth A BUDOS website is now live! Version 13 is
               here — you can track the leaderboard, participate in elections,
               post news, and stay updated with group news. More features coming
               soon. Welcome aboard!

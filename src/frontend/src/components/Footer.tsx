@@ -19,9 +19,7 @@ export default function Footer() {
           Compatible with 📱 Mobile · 📟 Tablet · 💻 Laptop · 🖥️ Computer · ⌚
           Smartwatch
         </p>
-        <p className="text-xs text-muted-foreground/50 font-mono">
-          Version 1.0
-        </p>
+        <p className="text-xs text-muted-foreground/50 font-mono">Version 13</p>
       </div>
     </footer>
   );
