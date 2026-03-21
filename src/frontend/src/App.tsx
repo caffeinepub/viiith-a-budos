@@ -63,13 +63,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <NavBar
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-        userProfile={userProfile}
-        onLoginClick={handleLoginClick}
-        isAdmin={isAdmin ?? false}
-      />
+      <ErrorBoundary>
+        <NavBar
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          userProfile={userProfile}
+          onLoginClick={handleLoginClick}
+          isAdmin={isAdmin ?? false}
+        />
+      </ErrorBoundary>
 
       <div className="flex-1">
         <ErrorBoundary key={`${currentPage}-${pageKey}`}>

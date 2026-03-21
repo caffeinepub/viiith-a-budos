@@ -61,7 +61,7 @@ function PollCard({
 }) {
   const voteMutation = useVoteInPoll();
   const { actor } = useActor();
-  const totalVotes = poll.votes.reduce((acc, v) => acc + Number(v), 0);
+  const totalVotes = (poll.votes ?? []).reduce((acc, v) => acc + Number(v), 0);
   const [userVote, setUserVote] = useState<bigint | null>(null);
   const [isChanging, setIsChanging] = useState(false);
 
@@ -556,13 +556,14 @@ export default function PollsPage({
                               )}
                               <span className="text-xs text-muted-foreground">
                                 by{" "}
-                                {profileMap.get(plan.creator.toString()) ??
-                                  "Member"}
+                                {profileMap.get(
+                                  plan.creator?.toString() ?? "",
+                                ) ?? "Member"}
                               </span>
                             </div>
                           </div>
                           {myPrincipal &&
-                            plan.creator.toString() === myPrincipal && (
+                            plan.creator?.toString() === myPrincipal && (
                               <Button
                                 variant="ghost"
                                 size="icon"

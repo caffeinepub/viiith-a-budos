@@ -160,17 +160,24 @@ export default function ElectionPage({
   const { data: voted } = useHasVoted();
   const castVote = useCastVote();
   const [confirmVoteId, setConfirmVoteId] = useState<bigint | null>(null);
-  const [electionTitle, setElectionTitle] = useState<string>(
-    () => localStorage.getItem("electionTitle") || "Class Election 2026-27",
+  const safeGetItem = (key: string, fallback = "") => {
+    try {
+      return localStorage.getItem(key) || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  const [electionTitle, setElectionTitle] = useState<string>(() =>
+    safeGetItem("electionTitle", "Class Election 2026-27"),
   );
-  const [electionDate, setElectionDate] = useState<string>(
-    () => localStorage.getItem("electionDate") || "",
+  const [electionDate, setElectionDate] = useState<string>(() =>
+    safeGetItem("electionDate"),
   );
-  const [electionTime, setElectionTime] = useState<string>(
-    () => localStorage.getItem("electionTime") || "",
+  const [electionTime, setElectionTime] = useState<string>(() =>
+    safeGetItem("electionTime"),
   );
-  const [electionDay, setElectionDay] = useState<string>(
-    () => localStorage.getItem("electionDay") || "",
+  const [electionDay, setElectionDay] = useState<string>(() =>
+    safeGetItem("electionDay"),
   );
   const [editInfoDialog, setEditInfoDialog] = useState(false);
   const [tempTitle, setTempTitle] = useState("");
@@ -275,10 +282,18 @@ export default function ElectionPage({
   };
 
   const handleSaveElectionInfo = () => {
-    localStorage.setItem("electionTitle", tempTitle);
-    localStorage.setItem("electionDate", tempDate);
-    localStorage.setItem("electionTime", tempTime);
-    localStorage.setItem("electionDay", tempDay);
+    try {
+      localStorage.setItem("electionTitle", tempTitle);
+    } catch {}
+    try {
+      localStorage.setItem("electionDate", tempDate);
+    } catch {}
+    try {
+      localStorage.setItem("electionTime", tempTime);
+    } catch {}
+    try {
+      localStorage.setItem("electionDay", tempDay);
+    } catch {}
     setElectionTitle(tempTitle);
     setElectionDate(tempDate);
     setElectionTime(tempTime);

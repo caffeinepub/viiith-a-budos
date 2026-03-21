@@ -1650,6 +1650,15 @@ function MathsDuelGame({ onBack, userProfile }: GameProps) {
   const [aiAnswered, setAiAnswered] = useState(false);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
+    };
+  }, []);
 
   const advance = useCallback(() => {
     if (current + 1 >= TOTAL) {
@@ -1669,16 +1678,19 @@ function MathsDuelGame({ onBack, userProfile }: GameProps) {
   useEffect(() => {
     if (done) return;
     const t = setInterval(() => {
-      setTimeLeft((tl) => {
-        if (tl <= 1) {
-          advance();
-          return TIME_PER_Q;
-        }
-        return tl - 1;
-      });
+      setTimeLeft((tl) => Math.max(0, tl - 1));
     }, 1000);
     return () => clearInterval(t);
-  }, [done, advance, current]);
+  }, [done, current]);
+
+  // Auto-advance when time runs out - separate from state updater
+  // biome-ignore lint/correctness/useExhaustiveDependencies: advance on timeLeft zero
+  useEffect(() => {
+    if (done) return;
+    if (timeLeft === 0) {
+      if (mountedRef.current) advance();
+    }
+  }, [timeLeft, done, advance]);
 
   // AI answer
   // biome-ignore lint/correctness/useExhaustiveDependencies: AI answer per question
@@ -1696,13 +1708,16 @@ function MathsDuelGame({ onBack, userProfile }: GameProps) {
   const handleSubmit = () => {
     if (done) return;
     const q = questions[current];
+    if (!q) return;
     const correct = Number.parseInt(input) === q.answer;
     if (correct) setPlayerScore((s) => s + 1);
     setFeedback(correct ? "correct" : "wrong");
-    setTimeout(advance, 700);
+    if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
+    submitTimerRef.current = setTimeout(advance, 700);
   };
 
   const reset = () => {
+    if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
     setCurrent(0);
     setInput("");
     setPlayerScore(0);
@@ -1713,7 +1728,7 @@ function MathsDuelGame({ onBack, userProfile }: GameProps) {
     setFeedback(null);
   };
 
-  const q = questions[current];
+  const q = questions[current] ?? questions[0];
 
   return (
     <GameShell
@@ -1900,8 +1915,25 @@ function StickmanGame({ onBack, userProfile }: GameProps) {
   const [winner, setWinner] = useState<"player" | "ai" | null>(null);
   const [playerSlapping, setPlayerSlapping] = useState(false);
   const [aiSlapping, setAiSlapping] = useState(false);
+  const outerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const innerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playerSlapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aiSlapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (outerTimerRef.current) clearTimeout(outerTimerRef.current);
+      if (innerTimerRef.current) clearTimeout(innerTimerRef.current);
+      if (playerSlapTimerRef.current) clearTimeout(playerSlapTimerRef.current);
+      if (aiSlapTimerRef.current) clearTimeout(aiSlapTimerRef.current);
+    };
+  }, []);
 
   const reset = () => {
+    if (outerTimerRef.current) clearTimeout(outerTimerRef.current);
+    if (innerTimerRef.current) clearTimeout(innerTimerRef.current);
+    if (playerSlapTimerRef.current) clearTimeout(playerSlapTimerRef.current);
+    if (aiSlapTimerRef.current) clearTimeout(aiSlapTimerRef.current);
     setPlayerHp(MAX_HP);
     setAiHp(MAX_HP);
     setPhase("idle");
@@ -1918,16 +1950,17 @@ function StickmanGame({ onBack, userProfile }: GameProps) {
     setPlayerSlapping(false);
     setAiSlapping(false);
     const delay = 1500 + Math.random() * 2500;
-    setTimeout(() => {
+    outerTimerRef.current = setTimeout(() => {
       setPhase("go");
-      // AI reacts in 300-900ms
       const aiDelay = 300 + Math.random() * 600;
-      setTimeout(() => {
-        // If player hasn't slapped yet, AI wins this round
+      innerTimerRef.current = setTimeout(() => {
         setPhase((p) => {
           if (p === "go") {
             setAiSlapping(true);
-            setTimeout(() => setAiSlapping(false), 400);
+            aiSlapTimerRef.current = setTimeout(
+              () => setAiSlapping(false),
+              400,
+            );
             setPlayerHp((hp) => {
               const newHp = hp - 1;
               if (newHp <= 0) setWinner("ai");
@@ -1948,7 +1981,10 @@ function StickmanGame({ onBack, userProfile }: GameProps) {
       return;
     }
     setPlayerSlapping(true);
-    setTimeout(() => setPlayerSlapping(false), 400);
+    playerSlapTimerRef.current = setTimeout(
+      () => setPlayerSlapping(false),
+      400,
+    );
     setAiHp((hp) => {
       const newHp = hp - 1;
       if (newHp <= 0) setWinner("player");

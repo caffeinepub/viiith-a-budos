@@ -124,7 +124,9 @@ function getChampions(
 ) {
   const champs: Record<string, { name: string; score: number }> = {};
   for (const entry of entries) {
-    const scoreMap = new Map(entry.scores.map(([s, v]) => [s, Number(v)]));
+    const scoreMap = new Map(
+      (entry.scores ?? []).map(([s, v]) => [s, Number(v)]),
+    );
     for (const sub of subjects) {
       const score = scoreMap.get(sub.key) ?? 0;
       if (!champs[sub.key] || score > champs[sub.key].score) {
@@ -224,7 +226,9 @@ function OverallLeaderboard({ isAdmin }: { isAdmin: boolean }) {
     setEditingName(entry.studentName);
     setStudentName(entry.studentName);
     setSubjects(
-      entry.scores.map(([s, v]) => [s, v.toString()] as [string, string]),
+      (entry.scores ?? []).map(
+        ([s, v]) => [s, v.toString()] as [string, string],
+      ),
     );
     setDialogOpen(true);
   };
@@ -473,8 +477,14 @@ function ExamLeaderboard({
     entries && entries.length > 0 ? getChampions(entries, subjects) : {};
 
   const sorted = [...(entries ?? [])].sort((a, b) => {
-    const aTotal = a.scores.reduce((s, [, v]) => s + Number(v), 0);
-    const bTotal = b.scores.reduce((s, [, v]) => s + Number(v), 0);
+    const aTotal = (a.scores ?? []).reduce(
+      (s: number, [, v]: [string, bigint]) => s + Number(v),
+      0,
+    );
+    const bTotal = (b.scores ?? []).reduce(
+      (s: number, [, v]: [string, bigint]) => s + Number(v),
+      0,
+    );
     return bTotal - aTotal;
   });
 
@@ -483,7 +493,7 @@ function ExamLeaderboard({
       setEditStudent(entry.studentName);
       setEditId(entry.id);
       const sc: Record<string, string> = {};
-      for (const [s, v] of entry.scores) sc[s] = v.toString();
+      for (const [s, v] of entry.scores ?? []) sc[s] = v.toString();
       setEditScores(sc);
     } else {
       setEditStudent("");
@@ -656,7 +666,7 @@ function ExamLeaderboard({
             <tbody className="divide-y divide-border">
               {sorted.map((entry, i) => {
                 const scoreMap = new Map(
-                  entry.scores.map(([s, v]) => [s, Number(v)]),
+                  (entry.scores ?? []).map(([s, v]) => [s, Number(v)]),
                 );
                 const total = subjects.reduce(
                   (sum, s) => sum + (scoreMap.get(s.key) ?? 0),

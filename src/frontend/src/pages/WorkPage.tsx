@@ -199,7 +199,9 @@ export default function WorkPage({ isAuthenticated }: WorkPageProps) {
   const [description, setDescription] = useState("");
 
   const profileMap = new Map(
-    (allProfiles ?? []).map((p) => [p.userId.toString(), p.displayName]),
+    (allProfiles ?? [])
+      .filter((p) => p.userId != null)
+      .map((p) => [p.userId.toString(), p.displayName]),
   );
 
   const handleSubmit = async () => {
@@ -336,7 +338,9 @@ export default function WorkPage({ isAuthenticated }: WorkPageProps) {
                 <WorkPostCard
                   post={post}
                   authorName={
-                    profileMap.get(post.author.toString()) ?? "Member"
+                    post.author
+                      ? (profileMap.get(post.author.toString()) ?? "Member")
+                      : "Member"
                   }
                   isAuthenticated={isAuthenticated}
                 />

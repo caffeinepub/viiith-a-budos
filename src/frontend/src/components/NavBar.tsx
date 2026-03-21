@@ -72,9 +72,13 @@ export default function NavBar({
   const { actor } = useActor();
   const [challengeCount, setChallengeCount] = useState(0);
   const [cookieConsent, setCookieConsent] = useState<boolean | null>(() => {
-    const stored = localStorage.getItem("cookie_consent");
-    if (stored === "true") return true;
-    if (stored === "false") return false;
+    try {
+      const stored = localStorage.getItem("cookie_consent");
+      if (stored === "true") return true;
+      if (stored === "false") return false;
+    } catch {
+      // localStorage blocked
+    }
     return null;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -122,7 +126,11 @@ export default function NavBar({
   };
 
   const handleCookieConsent = (accept: boolean) => {
-    localStorage.setItem("cookie_consent", String(accept));
+    try {
+      localStorage.setItem("cookie_consent", String(accept));
+    } catch {
+      // ignore
+    }
     setCookieConsent(accept);
   };
 

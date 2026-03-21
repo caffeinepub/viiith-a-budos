@@ -181,7 +181,7 @@ export default function AdminPage() {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-secondary-foreground font-display font-bold text-sm shrink-0">
-                        {user.displayName.slice(0, 2).toUpperCase()}
+                        {(user.displayName ?? "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -294,15 +294,17 @@ export default function AdminPage() {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      {req.scores.map(([subject, score]: [string, bigint]) => (
-                        <Badge
-                          key={subject}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {subject}: {score.toString()}
-                        </Badge>
-                      ))}
+                      {(req.scores ?? []).map(
+                        ([subject, score]: [string, bigint]) => (
+                          <Badge
+                            key={subject}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {subject}: {score.toString()}
+                          </Badge>
+                        ),
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -372,7 +374,9 @@ export default function AdminPage() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold">
-                            {user.displayName.slice(0, 2).toUpperCase()}
+                            {(user.displayName ?? "?")
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </div>
                           <div>
                             <p className="text-sm font-medium">
