@@ -92,7 +92,9 @@ export default function NavBar({
   useEffect(() => {
     if (!isAuthenticated || !actor) return;
     const sendHeartbeat = () => {
-      (actor as any).recordHeartbeat().catch(() => {});
+      if (actor && typeof (actor as any).recordHeartbeat === "function") {
+        (actor as any).recordHeartbeat().catch(() => {});
+      }
     };
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 30_000);
